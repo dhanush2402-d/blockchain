@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract CryptoLocker {
+    struct Lock {
+        uint amount;
+        uint unlockTime;
+    }
+
+    mapping(address => Lock) public lockedFunds;
+
+    function deposit(uint _lockTimeInSeconds) public payable {
+        require(msg.value > 0, "Send ETH to lock");
+        lockedFunds[msg.sender] = Lock({
+            amount: msg.value,
+            unlockTime: block.timestamp + _lockTimeInSeconds
+        });
+    }
+
+    function withdraw() public {
+        Lock storage userLock = lockedFunds[msg.sender];
+        require(block.timestamp >= userLock.unlockTime, "Funds are still locked");
+        uint amount = userLock.amount;
+        userLock.amount = 0;
+        (bool success, ) = msg.sender.call{value: amount}("");
+        require(success, "Withdrawal failed");
+    }
+
+    function getLockedAmount() public view returns (uint) {
+        return lockedFunds[msg.sender].amount;
+    }
+
+    function getUnlockTime() public view returns (uint) {
+        return lockedFunds[msg.sender].unlockTime;
+    }
+}
