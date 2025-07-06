@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract PollingSystem {
+    struct Poll {
+        string title;
+        string[] options;
+        uint endTime;
+        mapping(uint => uint) voteCount;
+        mapping(address => bool) hasVoted;
+    }
+
+    mapping(uint => Poll) public polls;
+    uint public pollCount;
+
+    function createPoll(string memory _title, string[] memory _options, uint _duration) public {
+        pollCount++;
+        Poll storage p = polls[pollCount];
+        p.title = _title;
+        p.options = _options;
+        p.endTime = block.timestamp + _duration;
+    }
+
+    function vote(uint _pollId, uint _option) public {
+        Poll storage p = polls[_pollId];
+        require(block.timestamp < p.endTime, "Voting ended");
+        require(!p.hasVoted[msg.sender], "Already voted");
+        p.voteCount[_option]++;
+        p.hasVoted[msg.sender] = true;
+    }
+
+    function getWinner(uint _pollId) public view returns (string memory winner) {
+        Poll storage p = polls[_pollId];
+        require(block.timestamp >= p.endTime, "Poll still active");
+
+        uint maxVotes = 0;
+        uint winningIndex = 0;
+
+        for (uint i = 0; i < p.options.length; i++) {
+            if (p.voteCount[i] > maxVotes) {
+                maxVotes = p.voteCount[i];
+                winningIndex = i;
+            }
+        }
+
+        return p.options[winningIndex];
+    }
+}
